@@ -1,5 +1,5 @@
 # Lista as colunas de um arquivo e permite filtrar elas para armazenamento em um novo arquivo
-# Remove caracteres especiais que possam causar problemas de codificação
+# Remove caracteres especiais que possam causar problemas de encodificação
 
 library(data.table)
 library(stringi)
