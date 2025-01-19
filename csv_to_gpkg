@@ -1,5 +1,6 @@
 # Converte e escreve um arquivo .csv para o formato geopackage a ser usado para geoprocessamento
 # Realiza ajuste de nomes de coluna
+# Ajusta as colunas de Data e Hora e cria uma coluna com o timestamp de cada dado
 
 library(sf)
 library(data.table)
@@ -50,3 +51,34 @@ tryCatch({
 }, error = function(e) {
   cat("Erro ao salvar o GeoPackage:", e$message, "\n")
 })
+
+######### AJUSTE DE COLUNAS DATA E HORA ###########
+# A depender do arquivo original, os formatos de data e hora podem causar problemas em softwares de geoprocessamento
+# Essa segunda parte do script exemplifica isso transformando o formato de hora "HHMM UTC" para "HH:MM"
+# Também cria um Timestamp no formato YYYY-MM-DD HH:MM:SS para melhor leitura
+
+# Formatos data e hora
+  # Data: YYYY/MM/DD
+  # Hora: HHMM UTC
+
+# Ajuste da coluna "Hora" para um formato adequado
+dados_sf <- dados_sf %>%
+  mutate(
+    Hora.UTC = gsub(" UTC", "", Hora.UTC), # Remove o sufixo "UTC"
+    Hora.UTC = sprintf("%04d", as.numeric(Hora.UTC)), # Garante que tenha 4 dígitos (ex.: 830 -> 0830)
+    Hora.UTC = paste0(substr(Hora.UTC, 1, 2), ":", substr(Hora.UTC, 3, 4)) # Converte para formato "HH:MM"
+  )
+
+# Timestamp
+dados_sf <- dados_sf %>%
+  mutate(
+    Timestamp = as.POSIXct(paste(Data, Hora.UTC), format = "%Y/%m/%d %H:%M", tz = "UTC")
+  )
+
+#verificacao final
+print(head(dados_sf$Timestamp))
+
+gpkg_saida <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Dados Espaciais/dados_estacoes_tmstamp.gpkg"
+st_write(dados_sf, gpkg_saida, layer = "dados_animados", delete_dsn = TRUE)
+
+cat("Salvo em:", gpkg_saida, "\n")
