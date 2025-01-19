@@ -1,26 +1,27 @@
-# Extrai e armazena informações dos cabeçalhos, remove os cabeçalhos e combina os dados tabulares de uma série de arquivos .csv
-# Arquivos de entrada e saída utilizados em Resultados/Estacoes Combinadas
+# Extrai e armazena informações de cabeçalhos de arquivos .csv e pode adicionar informações destes cabeçalhos às colunas.
+# Combina os dados tabulares de uma série de arquivos .csv
+# Cria diretório com dados combinados e dados originais para comparação.
 
 library(dplyr)
 library(data.table)
 
-setwd("C:/Projetos/R/Meteorologicos_BSB")
+setwd("path to dir")
 
-automaticasBSB <- "C:/Projetos/R/Meteorologicos_BSB/Dados/EstAuto_BSB"
+data_folder <- "caminho do diretório de entrada (pasta com os arquivos .csv a serem combinados)"
 
-lista_estacoes <- list.files(automaticasBSB, pattern = "\\.[cC][sS][vV]$", full.names = TRUE)
+lista_arquivos <- list.files(data_folder, pattern = "\\.[cC][sS][vV]$", full.names = TRUE)
 
-print(lista_estacoes)
+print(lista_arquivos) # Lista todos os arquivos .csv encontrados na pasta
 
-headers_combinados <- NULL
+headers_combinados <- NULL # Dataframe temporário para armazenar os cabeçalhos
 
 processar <- function(arquivo) {
   # Cabecalhos
   header <- fread(arquivo, sep = ";", nrows = 8, header = FALSE)
   
-  # Extrair latitude e longitude
-  latitude <- as.numeric(gsub(",", ".",header[5, 2]))
-  longitude <- as.numeric(gsub(",", ".",header[6, 2]))
+  # Extrair dados dos cabeçalhos
+  xdata <- as.numeric(gsub(",", ".",header[5, 2]))
+  ydata <- as.numeric(gsub(",", ".",header[6, 2]))
   
   header <- header %>% mutate(Arquivo = basename(arquivo))
   
@@ -31,9 +32,9 @@ processar <- function(arquivo) {
   # Tabelas
   dados <- fread(arquivo, sep = ";", skip = 8)
   
-  # Criar colunas de latitude e longitude
+  # Criar colunas de dados extraídos do cabeçalho (latitude e longitude como exemplos)
   dados <- dados %>%
-    mutate(Latitude = latitude, Longitude = longitude)
+    mutate(X = xdata, Y = ydata)
   
   return(dados)
 }
@@ -50,15 +51,15 @@ print(headers_combinados)
 # View(headers_combinados)
 
 # Salvar novos resultados
-diretorio_saida <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Estacoes Combinadas"
+diretorio_saida <- "caminho para a pasta onde serão salvos os dados combinados"
 
 if (!dir.exists(diretorio_saida)) {
   dir.create(diretorio_saida)
   cat("Diretorio", diretorio_saida, "criado para armazenar resultados.", "\n")
 }
 
-estacoes_combinadas <- file.path(diretorio_saida, "estacoes_combinadas.csv")
-fwrite(dados_final, file = estacoes_combinadas, sep = ";", dec = ",", row.names = FALSE)
+dados_saida <- file.path(diretorio_saida, "dados_combinados.csv")
+fwrite(dados_final, file = dados_saida, sep = ";", dec = ",", row.names = FALSE)
 
 for (i in seq_along(dados_combinados)) {
   nome_arquivo <- basename(lista_estacoes[i])
