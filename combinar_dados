@@ -1,0 +1,68 @@
+# Extrai e armazena informações dos cabeçalhos, remove os cabeçalhos e combina os dados tabulares de uma série de arquivos .csv
+
+library(dplyr)
+library(data.table)
+
+setwd("C:/Projetos/R/Meteorologicos_BSB")
+
+automaticasBSB <- "C:/Projetos/R/Meteorologicos_BSB/Dados/EstAuto_BSB"
+
+lista_estacoes <- list.files(automaticasBSB, pattern = "\\.[cC][sS][vV]$", full.names = TRUE)
+
+print(lista_estacoes)
+
+headers_combinados <- NULL
+
+processar <- function(arquivo) {
+  # Cabecalhos
+  header <- fread(arquivo, sep = ";", nrows = 8, header = FALSE)
+  
+  # Extrair latitude e longitude
+  latitude <- as.numeric(gsub(",", ".",header[5, 2]))
+  longitude <- as.numeric(gsub(",", ".",header[6, 2]))
+  
+  header <- header %>% mutate(Arquivo = basename(arquivo))
+  
+  assign("headers_combinados", 
+         rbind(get("headers_combinados", envir = .GlobalEnv, inherits = TRUE), header), 
+         envir = .GlobalEnv)
+  
+  # Tabelas
+  dados <- fread(arquivo, sep = ";", skip = 8)
+  
+  # Criar colunas de latitude e longitude
+  dados <- dados %>%
+    mutate(Latitude = latitude, Longitude = longitude)
+  
+  return(dados)
+}
+
+dados_combinados <- lapply(lista_estacoes, processar)
+
+dados_final <- rbindlist(dados_combinados, use.names = TRUE, fill = TRUE)
+
+# Verificacao final
+print(dados_final)
+print(headers_combinados)
+
+# View(dados_final)
+# View(headers_combinados)
+
+# Salvar novos resultados
+diretorio_saida <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Estacoes Combinadas"
+
+if (!dir.exists(diretorio_saida)) {
+  dir.create(diretorio_saida)
+  cat("Diretorio", diretorio_saida, "criado para armazenar resultados.", "\n")
+}
+
+estacoes_combinadas <- file.path(diretorio_saida, "estacoes_combinadas.csv")
+fwrite(dados_final, file = estacoes_combinadas, sep = ";", dec = ",", row.names = FALSE)
+
+for (i in seq_along(dados_combinados)) {
+  nome_arquivo <- basename(lista_estacoes[i])
+  nome_saida <- file.path(diretorio_saida, paste0("Processado_", nome_arquivo))
+  fwrite(dados_combinados[[i]], file = nome_saida, sep = ";", dec = ",", row.names = FALSE)
+}
+
+cat("Salvo em:", diretorio_saida, "\n")
