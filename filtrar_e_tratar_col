@@ -1,0 +1,40 @@
+# Lista as colunas de um arquivo e permite filtrar elas para armazenamento em um novo arquivo
+# Remove caracteres especiais que possam causar problemas de codificação
+
+library(data.table)
+library(stringi)
+
+setwd("C:/Projetos/R/Meteorologicos_BSB")
+
+arquivo_entrada <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Estacoes Combinadas/estacoes_combinadas.csv"
+
+dir_saida <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Filtro"
+if (!dir.exists(dir_saida)) {
+  dir.create(dir_saida)
+}
+
+dados <- fread(arquivo_entrada, sep = ";", dec = ",", encoding = "UTF-8")
+
+# Remove ou substitui caracteres especiais
+col_og <- names(dados)
+col_mod <- stri_trans_general(col_og, "Latin-ASCII")
+names(dados) <- col_mod
+
+# Listar colunas
+for (i in seq_along(col_mod)) {
+  cat(i, "-", col_mod[i], "\n")
+}
+
+# View(dados)
+
+# Selecionar colunas (sempre selecionar latitude e longitude)
+col_selecionadas <- c(1, 2, 3, 8, 11, 12, 21, 22)
+
+col_final <- col_mod[col_selecionadas]
+dados_filtrados <- dados[, ..col_final]
+
+# Salvar
+arq_final <- file.path(dir_saida, "dados_filtrados.csv")
+fwrite(dados_filtrados, file = arq_final, sep = ";", dec = ",", row.names = FALSE)
+
+cat("Aquivo salvo em:", arq_final, "\n")
