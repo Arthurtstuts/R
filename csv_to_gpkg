@@ -6,10 +6,11 @@ library(sf)
 library(data.table)
 library(stringi)
 
-arquivo_csv <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Estacoes Combinadas/estacoes_combinadas.csv"
+arquivo_csv <- "caminho do diretório de entrada"
 
 dados <- fread(arquivo_csv, sep = ";", dec = ",", header = TRUE, encoding = "UTF-8")
 
+# Verifica a existencia de colunas de coordenadas no arquivo
 if (!("Latitude" %in% colnames(dados)) || !("Longitude" %in% colnames(dados))) {
   stop("Nao foram encontradas colunas de latitude e longitude")
 }
@@ -35,7 +36,7 @@ dados_sf <- st_as_sf(
 )
 
 # Diretorio de saida
-dir_saida_gpkg <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Dados Espaciais"
+dir_saida_gpkg <- "caminho para o diretorio de saida"
 
 if (!dir.exists(dir_saida_gpkg)) {
   dir.create(dir_saida_gpkg, recursive = TRUE)
@@ -47,7 +48,7 @@ gpkg_path <- file.path(dir_saida_gpkg, "dados_estacoes.gpkg")
 # Salvar
 tryCatch({
   st_write(dados_sf, gpkg_path, layer = "dados_estacoes", delete_dsn = TRUE)
-  cat("GeoPackage salvo com sucesso em:", gpkg_path, "\n")
+  cat("Salvo em:", gpkg_path, "\n")
 }, error = function(e) {
   cat("Erro ao salvar o GeoPackage:", e$message, "\n")
 })
