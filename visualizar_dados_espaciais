@@ -1,0 +1,36 @@
+# Permite a visualização de dados espaciais (nesse caso .gpkg, mas pode facilmente ser convertido para formatos diferentes)
+# Visualização estática ou interativa, pode ser modificada para filtrar dados ou adicionar mais camadas
+
+library(sf)
+library(ggplot2)
+library(tmap)
+
+gpkg_path <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Dados Espaciais/dados_estacoes.gpkg"
+
+dados_sf <- st_read(gpkg_path, layer = "dados_estacoes")
+
+# verificacao de dados
+# print(dados_sf)
+# summary(dados_sf)
+
+# Visualizacao estatica (ggplot2)
+ggplot(data = dados_sf) +
+  geom_sf() +
+  theme_minimal() +
+  labs(title = "Visualização Geográfica",
+       subtitle = "Camada: dados_estacoes",
+       caption = "Fonte: Arquivo GeoPackage") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Opção de filtrar dados (exibir apenas um conjunto)
+# dados_filtrados <- dados_sf[dados_sf$campo == "valor", ]
+
+# Visualizacao interativa (tmap)
+tmap_mode("view") # Ativa o modo interativo
+tm_shape(dados_sf) +
+  tm_dots(col = "blue", size = 0.1, alpha = 0.8) + #alterar cor e tamanho dos pontos
+  tm_layout(title = "Visualização Geográfica Interativa")
+
+# Adicionar outras camadas:
+# tm_shape(outro_dados_sf) +
+  # tm_polygons(col = "variavel")
