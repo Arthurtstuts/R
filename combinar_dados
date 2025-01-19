@@ -1,4 +1,5 @@
 # Extrai e armazena informações dos cabeçalhos, remove os cabeçalhos e combina os dados tabulares de uma série de arquivos .csv
+# Arquivos de entrada e saída utilizados em https://github.com/Arthurtstuts/R-Portifolio/tree/main/Resultados/Estacoes%20Combinadas
 
 library(dplyr)
 library(data.table)
