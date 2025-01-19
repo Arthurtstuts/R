@@ -1,0 +1,52 @@
+# Converte e escreve um arquivo .csv para o formato geopackage a ser usado para geoprocessamento
+# Realiza ajuste de nomes de coluna
+
+library(sf)
+library(data.table)
+library(stringi)
+
+arquivo_csv <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Estacoes Combinadas/estacoes_combinadas.csv"
+
+dados <- fread(arquivo_csv, sep = ";", dec = ",", header = TRUE, encoding = "UTF-8")
+
+if (!("Latitude" %in% colnames(dados)) || !("Longitude" %in% colnames(dados))) {
+  stop("Nao foram encontradas colunas de latitude e longitude")
+}
+
+# Ajustar nomes das colunas
+col_og <- names(dados)
+col_mod <- stri_trans_general(col_og, "Latin-ASCII")
+col_mod <- make.names(col_mod, unique = TRUE)
+names(dados) <- col_mod
+
+dados_sf <- st_as_sf(
+  dados,
+  coords = c("Longitude", "Latitude"),
+  crs = 4326 # Sistema de coordenadas WGS84
+  
+  ######## Sistemas de coordenadas: ########
+  #SIRGAS2000 UTM 22S: 31982
+  #SIRGAS2000 UTM 23S: 31983
+  #SAD69 UTM 22S: 5532 ou 5858
+  #SAD69 UTM 23S: 5533
+  #WGS84: 4326
+  #Mercator: 3857
+)
+
+# Diretorio de saida
+dir_saida_gpkg <- "C:/Projetos/R/Meteorologicos_BSB/Resultados/Dados Espaciais"
+
+if (!dir.exists(dir_saida_gpkg)) {
+  dir.create(dir_saida_gpkg, recursive = TRUE)
+  cat("Diretorio", dir_saida_gpkg, "criado para armazenar dados espaciais.\n")
+}
+
+gpkg_path <- file.path(dir_saida_gpkg, "dados_estacoes.gpkg")
+
+# Salvar
+tryCatch({
+  st_write(dados_sf, gpkg_path, layer = "dados_estacoes", delete_dsn = TRUE)
+  cat("GeoPackage salvo com sucesso em:", gpkg_path, "\n")
+}, error = function(e) {
+  cat("Erro ao salvar o GeoPackage:", e$message, "\n")
+})
