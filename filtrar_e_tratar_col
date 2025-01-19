@@ -20,7 +20,7 @@ col_og <- names(dados)
 col_mod <- stri_trans_general(col_og, "Latin-ASCII")
 names(dados) <- col_mod
 
-# Listar colunas
+# Listar e numerar colunas
 for (i in seq_along(col_mod)) {
   cat(i, "-", col_mod[i], "\n")
 }
