@@ -1,6 +1,6 @@
 # Converte e escreve um arquivo .csv para o formato geopackage a ser usado para geoprocessamento
 # Realiza ajuste de nomes de coluna
-# Ajusta as colunas de Data e Hora e cria uma coluna com o timestamp de cada dado
+# Cria um segundo .gpkg com ajuste nos formatos de Data e Hora e com uma coluna com o timestamp de cada dado
 
 library(sf)
 library(data.table)
