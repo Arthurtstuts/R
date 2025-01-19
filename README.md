@@ -1,4 +1,4 @@
-# Portifolio de R
+# Repositório de scripts de R
 
 # Alguns scripts em R para trabalhar com data-frames
 
