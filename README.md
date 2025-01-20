@@ -1,4 +1,7 @@
-# Repositório de scripts de R
+# Repositório de scripts e projetos em R
+
+/Scripts: Alguns pequenos scripts para tratar dados rapidamente
+/Projetos: Scripts maiores buscando uma analise mais completa de dados
 
 # Scripts modulares em R para trabalhar com diferentes dataframes.
 
