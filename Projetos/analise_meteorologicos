@@ -1,0 +1,106 @@
+# Extração e análise de dados de precipitação, umidade, temperatura, vento, entre outros de estações do INMET
+# Visualização gráfica e cartográfica de dados
+
+library(data.table)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(gganimate)
+library(sf)
+library(dplyr)
+
+setwd("diretório de trabalho")
+
+path_arquivo <- "C:/Projetos/R/Meteorologicos_BSB/dados_filtrados_estacoes.csv"
+
+dados <- fread(path_arquivo, sep = ";", dec = ",", encoding = "UTF-8")
+
+head(dados)
+
+# Ajuste de nome de colunas(evita problemas com caracteres especiais)
+
+setnames(dados, old = colnames(dados), new = c(
+  "Data", 
+  "Hora", 
+  "Precipitacao", 
+  "Pressao", 
+  "Temp_Max", 
+  "Temp_Min", 
+  "Umidade", 
+  "Vento", 
+  "Latitude", 
+  "Longitude"
+  ))
+
+# Ajuste do formato da coluna "Hora" e criação de um timestamp
+dados <- dados %>%
+  mutate(
+    Hora = gsub(" UTC", "", Hora), # Remove o sufixo "UTC"
+    Hora = sprintf("%04d", as.numeric(Hora)), # Garante que tenha 4 dígitos (ex.: 830 -> 0830)
+    Hora = paste0(substr(Hora, 1, 2), ":", substr(Hora, 3, 4)) # Converte para formato "HH:MM"
+  )
+
+dados <- dados %>%
+  mutate(
+    Timestamp = as.POSIXct(paste(Data, Hora), format = "%Y/%m/%d %H:%M", tz = "UTC")
+  )
+setorder(dados, Timestamp)
+
+
+####### ANALISE ########
+
+# Temperaturas
+
+ggplot(dados, aes(x = Timestamp)) +
+  geom_line(aes(y = Temp_Max, color = "Temp_Max")) +
+  geom_line(aes(y = Temp_Min, color = "Temp_Min")) +
+  labs(title = "Temperaturas Máximas e Mínimas ao longo do Tempo",
+       x = "Tempo", y = "Temperatura (°C)") +
+  scale_color_manual(values = c("Temp_Max" = "red", "Temp_Min" = "blue"),
+                     name = "Legenda") +
+  theme_minimal()
+
+
+# Precipitação
+
+dados[, .(Precipitacao_Total = sum(Precipitacao, na.rm = TRUE)), by = Data] %>%
+  ggplot(aes(x = as.Date(Data), y = Precipitacao_Total)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Precipitação Diária Total", x = "Data", y = "Precipitação (mm)") +
+  theme_minimal()
+
+# Mapa de velocidade do vento
+
+dados_sf <- st_as_sf(dados, 
+                     coords = c("Longitude", "Latitude"), 
+                     crs = 4326 #WGS84
+                     )
+
+ggplot(dados_sf) +
+  geom_sf(aes(size = Vento, color = Vento)) +
+  scale_color_viridis_c() +
+  labs(title = "Mapa de Velocidade do Vento",
+       size = "Velocidade (km/h)",
+       color = "Velocidade (km/h)") +
+  theme_minimal()
+
+# Matriz de correlação de dados
+numerical_vars <- dados[, .(Precipitacao, Pressao, Temp_Max, Temp_Min, Umidade, Vento)]
+
+cor_matrix <- cor(numerical_vars, use = "complete.obs")
+
+print(cor_matrix)
+
+# Variação de umidade
+
+anim <- ggplot(dados, aes(x = Longitude, y = Latitude, color = Umidade)) +
+  geom_point(size = 3) +
+  scale_color_viridis_c() +
+  labs(title = "Umidade ao Longo do Tempo: {closest_state}",
+       x = "Longitude", y = "Latitude", color = "Umidade (%)") +
+  theme_minimal() +
+  transition_time(Timestamp) +
+  ease_aes('linear')
+
+animate(anim, nframes = 200, fps = 10, width = 800, height = 600)
+anim_save("animacao_umidade.gif")
