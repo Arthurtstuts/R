@@ -1,0 +1,130 @@
+# Analise estatistica e grafica de dados populacionais das 10 maiores cidades do Brasil com base em dados do IBGE
+# Plotagem desses dados em diferentes 
+
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(lubridate)
+library(plotly)
+library(scales)
+library(corrplot)
+library(caret)
+library(cluster)
+library(factoextra)
+library(heatmaply)
+
+# Dados extraidos do IBGE
+data <- tibble(
+  cidade = c("São Paulo", "Rio de Janeiro", "Belo Horizonte", "Brasília", "Curitiba", "Manaus", "Salvador", "Recife", "Porto Alegre", "Fortaleza"),
+  populacao_2024 = c(11895578, 6729894, 2416339, 2982818, 1829225, 2279686, 2568928, 1587707, 1389322, 2574412), #População estimada para 2024
+  crescimento_ano = c(0.012, 0.009, 0.010, 0.007, 0.015, 0.020, 0.018, 0.011, 0.008, 0.010),  # Crescimento anual em percentual
+  pib = c(828980608, 359634753, 105829675, 286943782, 98003704, 103281436, 62954487, 54970305, 81562848, 73436128),  # PIB do municipio (1000 R$)
+  area_km2 = c(1521.202, 1200.330, 331.354, 5760.783, 435.277, 11401.002, 693.442, 218.843, 495.977, 312.353),  # Área em km² (projeção de 2023)
+  pib_per_capita = pib * 1000 / populacao_2024 # Cálculo do PIB per capita em reais
+  )
+
+print("Dados carregados:")
+print(data)
+
+summary(data)
+
+# Analise de variabilidade
+variabilidade <- data %>%
+  summarise(
+    sd_populacao = sd(populacao_2024),
+    sd_crescimento = sd(crescimento_ano),
+    sd_pib = sd(pib_per_capita),
+    sd_area = sd(area_km2)
+  )
+print("Desvio padrão das variáveis:")
+print(variabilidade)
+
+
+outliers <- data %>%
+  mutate(
+    outlier_populacao = ifelse(populacao_2024 < quantile(populacao_2024, 0.25) - 1.5 * IQR(populacao_2024) | populacao_2024 > quantile(populacao_2024, 0.75) + 1.5 * IQR(populacao_2024), TRUE, FALSE),
+    outlier_crescimento = ifelse(crescimento_ano < quantile(crescimento_ano, 0.25) - 1.5 * IQR(crescimento_ano) | crescimento_ano > quantile(crescimento_ano, 0.75) + 1.5 * IQR(crescimento_ano), TRUE, FALSE)
+  )
+print("Outliers identificados:")
+print(outliers)
+
+# Distribuicao PIB per capita
+ggplot(data, aes(x = pib_per_capita)) +
+  geom_histogram(bins = 8, fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribuição de PIB per Capita",
+       x = "PIB per Capita (R$)", y = "Frequência") +
+  theme_minimal()
+
+# Plotagem de crescimento populacional
+ggplot(data, aes(x = "", y = crescimento_ano)) +
+  geom_boxplot(fill = "lightgreen", color = "darkgreen") +
+  labs(title = "Boxplot de Crescimento Populacional",
+       x = "Crescimento Populacional Anual", y = "Crescimento Anual (%)") +
+  theme_minimal()
+
+# Matriz de correlacao
+correlacao <- cor(data %>% select(populacao_2024, crescimento_ano, pib_per_capita, area_km2))
+print("Matriz de Correlação entre variáveis:")
+print(correlacao)
+
+corrplot(correlacao, method = "color", type = "upper", 
+         tl.col = "black", tl.cex = 0.8, addCoef.col = "black")
+
+set.seed(456)
+cluster_data <- data %>%
+  select(populacao_2024, crescimento_ano, pib_per_capita, area_km2)
+
+fviz_nbclust(cluster_data, kmeans, method = "wss", k.max = nrow(cluster_data) - 1)
+
+kmeans_result <- kmeans(cluster_data, centers = 3, nstart = 25)
+data$cluster <- as.factor(kmeans_result$cluster)
+
+ggplot(data, aes(x = pib_per_capita, y = populacao_2024, color = cluster)) +
+  geom_point(size = 4) +
+  labs(title = "Clusters de Cidades com base no PIB e População",
+       x = "PIB per Capita", y = "População") +
+  theme_minimal()
+
+modelo_regressao <- lm(pib_per_capita ~ populacao_2024 + crescimento_ano + area_km2, data = data)
+summary(modelo_regressao)
+
+data <- data %>%
+  mutate(pib_estimado = predict(modelo_regressao, newdata = data))
+
+ggplot(data, aes(x = pib_per_capita, y = pib_estimado, color = cidade)) +
+  geom_point(size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Comparação entre PIB Real e Estimado",
+       x = "PIB Real", y = "PIB Estimado") +
+  theme_minimal()
+
+# Simulacao de dados temporais
+anos <- seq(2015, 2025)
+pib_temporal <- data.frame(
+  ano = rep(anos, each = nrow(data)),
+  cidade = rep(data$cidade, times = length(anos)),
+  pib_temporal = c(sapply(data$pib_per_capita, function(x) x * (1 + 0.05)^(anos - 2020)))
+)
+
+pib_temporal_ts <- pib_temporal %>%
+  mutate(data = as.Date(paste(ano, 1, 1, sep = "-"))) %>%
+  group_by(cidade) %>%
+  arrange(data)
+
+# Plotagem do pib ao longo dos anos
+ggplot(pib_temporal_ts, aes(x = data, y = pib_temporal, color = cidade)) +
+  geom_line() +
+  labs(title = "Projeção de PIB de 2015 a 2025",
+       x = "Ano", y = "PIB Estimado") +
+  theme_minimal()
+
+# Visualização interativa
+heatmaply(correlacao, 
+          xlab = "Variáveis", ylab = "Variáveis", 
+          main = "Mapa de Calor da Matriz de Correlação",
+          dendrogram = "both", 
+          scale_fill_gradient_fun = scale_fill_viridis())
+
+# Exportar resultados
+write_csv(data, "analise_completa_cidades.csv")
